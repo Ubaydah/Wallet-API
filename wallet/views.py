@@ -11,6 +11,7 @@ from rest_framework import status
 from django.db.models import Sum
 # Create your views here
 
+
 class Login(APIView):
     permission_classes = ()
 
@@ -23,39 +24,46 @@ class Login(APIView):
         else:
             return Response({"error": "Wrong Credentials"}, status=status.HTTP_400_BAD_REQUEST)
 
+
 class Register(generics.CreateAPIView):
     authentication_classes = ()
     permission_classes = ()
     serializer_class = UserSerializer
 
-  
-class UserInfo(APIView):
-    def get(self, request, pk):
-        user = CustomUser.objects.get(pk=pk)
-        data = UserSerializer(user).data
 
-        return Response(data)
+@api_view(["GET"])
+def user_info(request):
+    print(request.headers)
+    user = request.user
+    data = UserSerializer(user).data
+    return Response(data)
+
 
 class WalletInfo(APIView):
-    def get(self, request, pk):
-        wallet = Wallet.objects.get(pk=pk)
+    def get(self, request):
+        wallet = Wallet.objects.get(user=request.user)
         data = WalletSerializer(wallet).data
-
         return Response(data)
 
+
 @api_view(['GET'])
-def wallet_transactions(request, pk):
+def wallet_transactions(request):
     #paginator = PageNumberPagination()
-    wallet = Wallet.objects.get(id=pk)
-    transactions = WalletTransaction.objects.filter(wallet=wallet)
+    #wallet = Wallet.objects.get(user=request.user)
+    transactions = WalletTransaction.objects.filter(wallet__user=request.user)
     #context = paginator.paginate_queryset(transactions, request)
     serializer = WalletTransactionSerializer(transactions, many=True)
 
     return Response(serializer.data)
 
+
 @api_view(['GET'])
-def transaction_detail(request, pk, transaction_pk):
-    transaction = WalletTransaction.objects.get(id=transaction_pk)
+def transaction_detail(request, transaction_pk):
+    try:
+        transaction = WalletTransaction.objects.get(
+            id=transaction_pk, wallet__user=request.user)
+    except WalletTransaction.DoesNotExist:
+        return Response({"status": False, "detail": "Transaction Not Found"}, status.HTTP_404_NOT_FOUND)
 
     serializer = WalletTransactionSerializer(transaction)
 
@@ -65,13 +73,12 @@ def transaction_detail(request, pk, transaction_pk):
 @api_view(['POST'])
 def deposit_funds(self, request):
     serializer = WalletSerializer(data=request.data['amount'])
+
     if serializer.is_valid():
         #serializer.data['balance'] += request.data
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 
 
 @api_view(['GET', 'POST'])
