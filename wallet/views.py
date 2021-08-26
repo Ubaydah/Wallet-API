@@ -62,21 +62,6 @@ def transaction_detail(request, pk, transaction_pk):
     return Response(serializer.data)
 
 
-class DepositFund(APIView):
-
-    def post(self, request, pk):
-
-        deposit = request.data.get('deposit')
-        wallet = Wallet.objects.get(id=pk)
-        bal = WalletTransaction.objects.filter(wallet=wallet).aggregate(Sum('amount'))
-        if bal:
-            mon = self.post(deposit)
-            bal = bal + mon
-            context = {"amount_deposited": deposit, "balance": bal}
-
-            return Response(context)
-        return Response({"error": "Wrong Credentials"}, status=status.HTTP_400_BAD_REQUEST)
-
 @api_view(['POST'])
 def deposit_funds(self, request):
     serializer = WalletSerializer(data=request.data['amount'])
