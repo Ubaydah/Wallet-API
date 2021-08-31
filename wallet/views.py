@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from .serializers import WalletSerializer, WalletTransactionSerializer, UserSerializer
+from .serializers import *
 from .models import *
 from rest_framework import generics
 from rest_framework import status
@@ -72,22 +72,10 @@ def transaction_detail(request, transaction_pk):
 
 @api_view(['POST'])
 def deposit_funds(request):
-    wallet = Wallet.objects.get(user=request.user)
-    deposit = WalletTransaction.objects.create(
-        wallet = wallet,
-        transaction = "deposit",
-        amount = request.data['amount'],
-        timezone = timezone.now(),
-        source = "null",
-        destination = wallet,
-        status = "pending",
-    )
-    serializer = WalletTransactionSerializer(deposit)
-
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer = DepositSerializer(data=request.data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    desposit = serializer.save()
+    return Response({"status": True, "detail": "Deposit successfull"})
 
 
 @api_view(['GET', 'POST'])

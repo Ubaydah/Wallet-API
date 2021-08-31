@@ -36,4 +36,31 @@ class WalletSerializer(serializers.ModelSerializer):
 class WalletTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = WalletTransaction
-        fields = ['id', 'transaction', 'amount', 'source', 'destination', ]
+        fields = ['id', 'transaction_type', 'amount', 'source', 'destination', ]
+
+
+class DepositSerializer(serializers.Serializer):
+
+    amount = serializers.IntegerField()
+
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError({"detail": "Invalid Amount"})
+        return value
+
+    def save(self):
+        print(self.context)
+        user = self.context['request'].user
+        wallet = Wallet.objects.get(user=user)
+        data = self.validated_data
+        print(self.validated_data)
+        deposit = WalletTransaction.objects.create(
+            wallet = wallet,
+            transaction_type = "deposit",
+            amount = data["amount"],
+            destination = wallet,
+            status = "success",
+        )
+        return deposit
+
+
