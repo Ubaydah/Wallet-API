@@ -47,6 +47,7 @@ class WalletTransaction(models.Model):
         Wallet, null=True, on_delete=models.CASCADE, related_name='source', blank=True)
     destination = models.ForeignKey(
         Wallet, null=True, on_delete=models.CASCADE, related_name='destination', blank=True)
+    status = models.CharField(max_length=100, default="pending")
 
     def __str__(self):
         return self.wallet.user.__str__()

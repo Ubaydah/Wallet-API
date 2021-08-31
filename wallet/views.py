@@ -8,7 +8,7 @@ from .serializers import WalletSerializer, WalletTransactionSerializer, UserSeri
 from .models import *
 from rest_framework import generics
 from rest_framework import status
-from django.db.models import Sum
+from django.utils import timezone
 # Create your views here
 
 
@@ -71,10 +71,25 @@ def transaction_detail(request, transaction_pk):
 
 
 @api_view(['POST'])
+<<<<<<< HEAD
 def deposit_funds(self, request):
     serializer = WalletSerializer(data=request.data['amount'])
+=======
+def deposit_funds(request):
+    wallet = Wallet.objects.get(user=request.user)
+    deposit = WalletTransaction.objects.create(
+        wallet = wallet,
+        transaction = "deposit",
+        amount = request.data['amount'],
+        timezone = timezone.now(),
+        source = "null",
+        destination = wallet,
+        status = "pending",
+    )
+    serializer = WalletTransactionSerializer(deposit)
+
+>>>>>>> 216613d20bb0e5dcfa44d317f7d4848e62e3cc4d
     if serializer.is_valid():
-        #serializer.data['balance'] += request.data
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
