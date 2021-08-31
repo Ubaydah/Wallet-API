@@ -73,7 +73,6 @@ def transaction_detail(request, transaction_pk):
 @api_view(['POST'])
 def deposit_funds(self, request):
     serializer = WalletSerializer(data=request.data['amount'])
-
     if serializer.is_valid():
         #serializer.data['balance'] += request.data
         serializer.save()
