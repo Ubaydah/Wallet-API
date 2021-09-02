@@ -74,10 +74,14 @@ def transaction_detail(request, transaction_pk):
 def deposit_funds(request):
     serializer = DepositSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
-    desposit = serializer.save()
+    deposit = serializer.save()
     return Response({"status": True, "detail": "Deposit successfull"})
 
 
-@api_view(['GET', 'POST'])
+@api_view(['POST'])
 def transfer(request):
-    pass
+    serializer = TransferSerializer(data=request.data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response({"status": True, "detail": "Transfer successful" })
+

@@ -39,14 +39,19 @@ class WalletTransactionSerializer(serializers.ModelSerializer):
         fields = ['id', 'transaction_type', 'amount', 'source', 'destination', ]
 
 
+def is_amount(value):
+    if value <= 0:
+        raise serializers.ValidationError({"detail": "Invalid Amount"})
+    return value
+
 class DepositSerializer(serializers.Serializer):
 
-    amount = serializers.IntegerField()
+    amount = serializers.IntegerField(validators=[is_amount])
 
-    def validate_amount(self, value):
-        if value <= 0:
-            raise serializers.ValidationError({"detail": "Invalid Amount"})
-        return value
+    #def validate_amount(self, value):
+        #if value <= 0:
+            #raise serializers.ValidationError({"detail": "Invalid Amount"})
+        #return value
 
     def save(self):
         print(self.context)
@@ -54,6 +59,8 @@ class DepositSerializer(serializers.Serializer):
         wallet = Wallet.objects.get(user=user)
         data = self.validated_data
         print(self.validated_data)
+        #users = CustomUser.objects.all()
+        #print(users)
         deposit = WalletTransaction.objects.create(
             wallet = wallet,
             transaction_type = "deposit",
@@ -62,5 +69,51 @@ class DepositSerializer(serializers.Serializer):
             status = "success",
         )
         return deposit
+
+
+class TransferSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=100, decimal_places=2, validators=[is_amount])
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        if CustomUser.objects.filter(email=value).exists():
+            return value
+        raise serializers.ValidationError({"detail": "Email not found"})
+    
+    def save(self):
+        user = self.context['request'].user
+        wallet = Wallet.objects.get(user=user)
+        data = self.validated_data
+        tuser = CustomUser.objects.get(email__exact=data["email"])
+        transferWallet = Wallet.objects.get(user=tuser)
+
+        balw = WalletTransaction.objects.filter(
+            wallet=wallet).aggregate(Sum('amount'))['amount__sum']
+        balt = WalletTransaction.objects.filter(
+            wallet=transferWallet).aggregate(Sum('amount'))['amount__sum']
+        
+        
+        
+        if balw < data['amount']:
+            raise serializers.ValidationError({"detail": "insufficient funds"})
+        
+        else:
+            
+        
+            transfer = WalletTransaction.objects.create(
+                wallet = wallet,
+                transaction_type = "transfer",
+                amount = data["amount"],
+                source = wallet,
+                destination = transferWallet,
+                status = "success", 
+
+            )
+            balw = balw - data['amount']
+            balt = balt + data['amount']
+            return transfer
+        
+    
+
 
 
