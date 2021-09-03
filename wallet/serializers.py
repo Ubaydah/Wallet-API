@@ -69,9 +69,9 @@ class DepositSerializer(serializers.Serializer):
 
 class TransferSerializer(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=100, decimal_places=2, validators=[is_amount])
-    transfer_to = serializers.IntegerField()
+    destination = serializers.IntegerField()
 
-    def validate_transfer_to(self, value):
+    def validate_destination(self, value):
         if CustomUser.objects.filter(id=value).exists():
             return value
         raise serializers.ValidationError({"detail": "Id not found"})
@@ -80,7 +80,7 @@ class TransferSerializer(serializers.Serializer):
         user = self.context['request'].user
         wallet = Wallet.objects.get(user=user)
         data = self.validated_data
-        transfer_user = CustomUser.objects.get(id__exact=data["transfer_to"])
+        transfer_user = CustomUser.objects.get(id__exact=data["destination"])
         transferWallet = Wallet.objects.get(user=transfer_user)
 
         bal_wallet = WalletTransaction.objects.filter(
