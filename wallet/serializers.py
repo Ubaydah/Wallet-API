@@ -45,7 +45,7 @@ def is_amount(value):
     return value
 
 class DepositSerializer(serializers.Serializer):
-
+ 
     amount = serializers.IntegerField(validators=[is_amount])
 
     #def validate_amount(self, value):
@@ -75,6 +75,14 @@ class TransferSerializer(serializers.Serializer):
         if CustomUser.objects.filter(id=value).exists():
             return value
         raise serializers.ValidationError({"detail": "Id not found"})
+
+    
+    def get_balance(self, wallet):
+
+        bal = WalletTransaction.objects.filter(
+            wallet=wallet).aggregate(Sum('amount'))['amount__sum']
+        
+        return bal
     
     def save(self):
         user = self.context['request'].user
@@ -83,28 +91,15 @@ class TransferSerializer(serializers.Serializer):
         transfer_user = CustomUser.objects.get(id__exact=data["destination"])
         transferWallet = Wallet.objects.get(user=transfer_user)
 
-        bal_wallet = WalletTransaction.objects.filter(
-            wallet=wallet).aggregate(Sum('amount'))['amount__sum']
-    
-        
+       
+        bal_wallet = self.get_balance(wallet)
+
         if bal_wallet < data['amount']:
             raise serializers.ValidationError({"detail": "insufficient funds"})
         
         else:
-
-             
-            transfer_wallet = WalletTransaction.objects.create(
-                wallet = transferWallet,
-                transaction_type = "transfer",
-                amount = data["amount"],
-                source = wallet,
-                destination = transferWallet,
-                status = "success", 
-
-            )
-           
-        
-            source_wallet = WalletTransaction.objects.create(
+            
+            transfer_source = WalletTransaction.objects.create(
                 wallet = wallet,
                 transaction_type = "transfer",
                 amount = -data["amount"],
@@ -113,6 +108,18 @@ class TransferSerializer(serializers.Serializer):
                 status = "success", 
 
             )
+
+               
+            transfer_destination = WalletTransaction.objects.create(
+                wallet = transferWallet,
+                transaction_type = "transfer", 
+                amount = data["amount"],
+                source = wallet,
+                destination = transferWallet,
+                status = "success", 
+
+            )
+           
         
 
             
