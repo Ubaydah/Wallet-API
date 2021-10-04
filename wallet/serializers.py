@@ -47,11 +47,16 @@ def is_amount(value):
 class DepositSerializer(serializers.Serializer):
  
     amount = serializers.IntegerField(validators=[is_amount])
-
+    email = serializers.EmailField()
     #def validate_amount(self, value):
         #if value <= 0:
             #raise serializers.ValidationError({"detail": "Invalid Amount"})
         #return value
+    def validate_email(self, value):
+        if CustomUser.objects.filter(email=value).exists():
+            return value
+        raise serializers.ValidationError({"detail": "Email not found"})
+
 
     def save(self):
         user = self.context['request'].user
@@ -103,7 +108,7 @@ class TransferSerializer(serializers.Serializer):
                 wallet = wallet,
                 transaction_type = "transfer",
                 amount = -data["amount"],
-                source = wallet,
+                source = wallet, 
                 destination = transferWallet,
                 status = "success", 
 

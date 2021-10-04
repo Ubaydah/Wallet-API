@@ -11,5 +11,6 @@ urlpatterns = [
     path('login/', Login.as_view()),
     path('deposit/', deposit_funds),
     path('transfer/', transfer),
+    path('', deposit_verify),
 
 ]

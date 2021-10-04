@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
+ 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,6 +28,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+PAYSTACK_PUBLIC_KEY = 'pk_test_e8c0f010644180d4989da7e271e829f784a6047b'
+PAYSTACK_SECRET_KEY = 'sk_test_30ce4bbbb67824917f4893d27f7ad8b170ea02bd'
 
 # Application definition
 

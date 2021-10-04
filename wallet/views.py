@@ -1,3 +1,4 @@
+from django.http.response import JsonResponse
 from django.shortcuts import render
 from django.contrib.auth import authenticate
 from rest_framework.decorators import api_view
@@ -9,6 +10,8 @@ from .models import *
 from rest_framework import generics
 from rest_framework import status
 from django.utils import timezone
+import requests
+from django.conf import settings
 # Create your views here
 
 
@@ -74,8 +77,31 @@ def transaction_detail(request, transaction_pk):
 def deposit_funds(request):
     serializer = DepositSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
-    deposit = serializer.save()
-    return Response({"status": True, "detail": "Deposit successfull"})
+   
+    data = serializer.data
+    url1 = 'https://api.paystack.co/transaction/initialize'
+    headers = {"Authorization": "Bearer sk_test_30ce4bbbb67824917f4893d27f7ad8b170ea02bd"}
+    r = requests.post(url1, headers=headers, data=data)
+    response = r.json()
+    #ref = response["data"]["reference"]
+    #url2 = 'https://api.paystack.co/transaction/verify/{}'.format(ref)
+    #r2 = requests.get(url2, headers=headers)
+    
+    #serializer.save()
+
+
+    return Response(r.json())
+
+@api_view(['GET'])
+def deposit_verify(request):
+    data = deposit_funds(request)
+    print(data)
+
+
+
+
+
+
 
 
 @api_view(['POST'])
@@ -85,3 +111,9 @@ def transfer(request):
     serializer.save()
     return Response({"status": True, "detail": "Transfer successful" })
 
+def home(request):
+    response = requests.get('https://api.paystack.co/transaction/initialize')
+    data = response.json()
+
+    return JsonResponse(data)
+ 
