@@ -77,30 +77,21 @@ def transaction_detail(request, transaction_pk):
 def deposit_funds(request):
     serializer = DepositSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
-   
-    data = serializer.data
-    url1 = 'https://api.paystack.co/transaction/initialize'
-    headers = {"Authorization": "Bearer sk_test_30ce4bbbb67824917f4893d27f7ad8b170ea02bd"}
-    r = requests.post(url1, headers=headers, data=data)
-    response = r.json()
-    #ref = response["data"]["reference"]
-    #url2 = 'https://api.paystack.co/transaction/verify/{}'.format(ref)
-    #r2 = requests.get(url2, headers=headers)
     
-    #serializer.save()
+    deposit = serializer.save()
 
 
-    return Response(r.json())
+    return Response(deposit)
 
-@api_view(['GET'])
+@api_view(['POST'])
 def deposit_verify(request):
-    data = deposit_funds(request)
-    print(data)
+    serializer = VerifySerializer(data=request.data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
 
 
+    a = serializer.save()
 
-
-
+    return Response(a)
 
 
 
