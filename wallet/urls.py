@@ -10,7 +10,7 @@ urlpatterns = [
     path('register/', Register.as_view()),
     path('login/', Login.as_view()),
     path('deposit/', deposit_funds),
-    path('transfer/', transfer),
-    path('deposit/verify/', deposit_verify),
+    path('transfer/', transfer_funds),
+    path('deposit/verify/<str:reference>/', verify_deposit),
 
 ]

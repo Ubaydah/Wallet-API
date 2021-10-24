@@ -2,7 +2,7 @@ from .models import Wallet, WalletTransaction, CustomUser
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 from django.db.models import Sum
-import requests
+import requests 
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -70,28 +70,13 @@ class DepositSerializer(serializers.Serializer):
         deposit = WalletTransaction.objects.create(
             wallet = wallet,
             transaction_type = "deposit",
-            amount = data["amount"],
+            amount = 0, #data["amount"],
+            paystack_payment_reference = response['data']['reference'],
             destination = wallet,
-            status = "success",
+            status = "pending",
         )
-        return response
-
-class VerifySerializer(serializers.Serializer):
-
-    reference = serializers.CharField()
-
-    def save(self):
-        user = self.context['request'].user
-        data = self.validated_data
-        ref = data["reference"]
-        url = 'https://api.paystack.co/transaction/verify/{}'.format(ref)
-        headers = {"Authorization": "Bearer sk_test_30ce4bbbb67824917f4893d27f7ad8b170ea02bd"}
-        r = requests.get(url, headers=headers)
-        response = r.json()
 
         return response
-
-
 
 
 

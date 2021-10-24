@@ -48,6 +48,7 @@ class WalletTransaction(models.Model):
     destination = models.ForeignKey(
         Wallet, null=True, on_delete=models.CASCADE, related_name='destination', blank=True)
     status = models.CharField(max_length=100, default="pending")
+    paystack_payment_reference = models.CharField(max_length=100, default='', blank=True)
 
     def __str__(self):
         return self.wallet.user.__str__()

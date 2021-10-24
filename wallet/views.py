@@ -1,3 +1,4 @@
+import json
 from django.http.response import JsonResponse
 from django.shortcuts import render
 from django.contrib.auth import authenticate
@@ -83,20 +84,31 @@ def deposit_funds(request):
 
     return Response(deposit)
 
+""""
+    Used to verify the deposit done
+
+"""
+
+@api_view(['GET'])
+def verify_deposit(request, reference): 
+    transaction = WalletTransaction.objects.get(paystack_payment_reference=reference, wallet__user=request.user)
+    reference = transaction.paystack_payment_reference
+    url = 'https://api.paystack.co/transaction/verify/{}'.format(reference)
+    headers = {"Authorization": "Bearer sk_test_30ce4bbbb67824917f4893d27f7ad8b170ea02bd"}
+    r = requests.get(url, headers=headers)
+    resp = r.json()
+    if resp['data']['status'] == 'success':
+        status = resp['data']['status']
+        amount = resp['data']['amount']
+        WalletTransaction.objects.filter(paystack_payment_reference=reference).update(status=status, 
+        amount=amount)
+        return Response(resp)
+    return Response(resp)
+
+
+
 @api_view(['POST'])
-def deposit_verify(request):
-    serializer = VerifySerializer(data=request.data, context={"request": request})
-    serializer.is_valid(raise_exception=True)
-
-
-    a = serializer.save()
-
-    return Response(a)
-
-
-
-@api_view(['POST'])
-def transfer(request):
+def transfer_funds(request):
     serializer = TransferSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
     serializer.save()
