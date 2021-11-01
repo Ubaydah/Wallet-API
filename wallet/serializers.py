@@ -63,9 +63,9 @@ class DepositSerializer(serializers.Serializer):
         user = self.context['request'].user
         wallet = Wallet.objects.get(user=user)
         data = self.validated_data
-        url1 = 'https://api.paystack.co/transaction/initialize'
+        url = 'https://api.paystack.co/transaction/initialize'
         headers = {"Authorization": "Bearer sk_test_30ce4bbbb67824917f4893d27f7ad8b170ea02bd"}
-        r = requests.post(url1, headers=headers, data=data)
+        r = requests.post(url, headers=headers, data=data)
         response = r.json()
         deposit = WalletTransaction.objects.create(
             wallet = wallet,
@@ -78,11 +78,108 @@ class DepositSerializer(serializers.Serializer):
 
         return response
 
+class VerifyAccountSerializer(serializers.Serializer):
+    account_number = serializers.CharField(max_length=100)
+    bank_code = serializers.CharField(max_length=100)
 
+
+    def save(self):
+        user = self.context['request'].user
+        data = self.validated_data
+        account_number = data['account_number']
+        bank_code = data['bank_code']
+        url = 'https://api.paystack.co/bank/resolve?account_number={}&bank_code={}'.format(account_number, bank_code)
+        headers = {"Authorization": "Bearer sk_test_30ce4bbbb67824917f4893d27f7ad8b170ea02bd"}
+        r = requests.get(url, headers=headers)
+        resp = r.json()
+        if resp['message'] == "Account number resolved":
+            Wallet.objects.filter(user=user).update(account_number=account_number, bank_code=bank_code)
+
+            return resp
+        return resp
+
+
+class TransferRecipientSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=250)
+
+    
+    def save(self):
+        user = self.context['request'].user
+        data = self.validated_data
+        name = data['name']
+        wallet = Wallet.objects.get(user=user)
+        account_number = wallet.account_number
+        bank_code = wallet.bank_code
+        url = 'https://api.paystack.co/transferrecipient'
+        headers = {"Authorization": "Bearer sk_test_30ce4bbbb67824917f4893d27f7ad8b170ea02bd"}
+        data = { "type": "nuban",
+            "name": name,
+            "account_number": account_number,
+            "bank_code": bank_code,
+            "currency": "NGN"
+        }
+        r = requests.post(url, headers=headers, data=data)
+        resp = r.json()
+        recipient_code = resp['data']['recipient_code']
+        Wallet.objects.filter(user=user).update(recipient_code=recipient_code)
+
+        return resp
+
+def get_balance(wallet):
+
+        bal = WalletTransaction.objects.filter(
+            wallet=wallet).aggregate(Sum('amount'))['amount__sum']
+        
+        return bal
+
+class WithdrawalSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=100, decimal_places=0, validators=[is_amount])
+
+    def save(self):
+        user = self.context['request'].user
+        wallet = Wallet.objects.get(user=user)
+        data = self.validated_data
+        amount = data['amount']
+
+        bal_wallet = get_balance(wallet)
+
+        if bal_wallet < data['amount']:
+            raise serializers.ValidationError({"detail": "insufficient funds"})
+        
+        else:
+
+            url = 'https://api.paystack.co/transfer'
+            headers = {"Authorization": "Bearer sk_test_30ce4bbbb67824917f4893d27f7ad8b170ea02bd"}
+            recipient_code = wallet.recipient_code
+            data = {
+                "source": "balance",
+                "amount": amount,
+                "recipient": recipient_code
+            }
+            r = requests.post(url, headers=headers, data=data)
+            resp = r.json()
+
+            if resp['message'] == 'Transfer has been queued':
+                transfer_code = resp["data"]["transfer_code"]
+                WalletTransaction.objects.create(
+                wallet = wallet,
+                transaction_type = "withdraw",
+                amount = -amount,
+                source = wallet, 
+                status = "success",
+                paystack_payment_reference = transfer_code 
+
+            )
+
+                return resp
+            else:
+                return resp
+        
+        
 
 
 class TransferSerializer(serializers.Serializer):
-    amount = serializers.DecimalField(max_digits=100, decimal_places=2, validators=[is_amount])
+    amount = serializers.DecimalField(max_digits=100, decimal_places=0, validators=[is_amount])
     destination = serializers.IntegerField()
 
     def validate_destination(self, value):
@@ -90,33 +187,48 @@ class TransferSerializer(serializers.Serializer):
             return value
         raise serializers.ValidationError({"detail": "Id not found"})
 
-    
+    """
     def get_balance(self, wallet):
 
         bal = WalletTransaction.objects.filter(
             wallet=wallet).aggregate(Sum('amount'))['amount__sum']
         
         return bal
-    
+    """
     def save(self):
         user = self.context['request'].user
         wallet = Wallet.objects.get(user=user)
         data = self.validated_data
+        amount = data['amount']
         transfer_user = CustomUser.objects.get(id__exact=data["destination"])
         transferWallet = Wallet.objects.get(user=transfer_user)
 
        
-        bal_wallet = self.get_balance(wallet)
+        bal_wallet = get_balance(wallet)
 
         if bal_wallet < data['amount']:
             raise serializers.ValidationError({"detail": "insufficient funds"})
         
         else:
             
-            transfer_source = WalletTransaction.objects.create(
+            url = 'https://api.paystack.co/transfer'
+            headers = {"Authorization": "Bearer sk_test_30ce4bbbb67824917f4893d27f7ad8b170ea02bd"}
+            recipient_code = transferWallet.recipient_code
+            data = {
+                "source": "balance",
+                "amount": amount,
+                "recipient": recipient_code
+            }
+            r = requests.post(url, headers=headers, data=data)
+            resp = r.json()
+
+            if resp['message'] == 'Transfer has been queued':
+                transfer_code = resp["data"]["transfer_code"]
+                
+                WalletTransaction.objects.create(
                 wallet = wallet,
                 transaction_type = "transfer",
-                amount = -data["amount"],
+                amount = -amount,
                 source = wallet, 
                 destination = transferWallet,
                 status = "success", 
@@ -124,16 +236,20 @@ class TransferSerializer(serializers.Serializer):
             )
 
                
-            transfer_destination = WalletTransaction.objects.create(
+                WalletTransaction.objects.create(
                 wallet = transferWallet,
                 transaction_type = "transfer", 
-                amount = data["amount"],
+                amount = amount,
                 source = wallet,
                 destination = transferWallet,
-                status = "success", 
+                status = "success",
+                paystack_payment_reference = transfer_code, 
 
             )
-           
+
+                return resp
+            else:
+                return resp           
         
 
             

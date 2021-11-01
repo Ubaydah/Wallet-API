@@ -2,7 +2,9 @@ import json
 from django.http.response import JsonResponse
 from django.shortcuts import render
 from django.contrib.auth import authenticate
+from requests import api
 from rest_framework.decorators import api_view
+from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
@@ -84,8 +86,8 @@ def deposit_funds(request):
 
     return Response(deposit)
 
-""""
-    Used to verify the deposit done
+"""
+    Used to verify the deposit done 
 
 """
 
@@ -106,17 +108,38 @@ def verify_deposit(request, reference):
     return Response(resp)
 
 
+@api_view(['POST'])
+def verify_account_number(request):
+    serializer = VerifyAccountSerializer(data=request.data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    response = serializer.save()
+
+    return Response(response)
+ 
+@api_view(['POST'])
+def create_transfer_recipient(request):
+    serializer = TransferRecipientSerializer(data=request.data, context={'request': request})
+    serializer.is_valid(raise_exception=True)
+    recipient = serializer.save()
+    return Response(recipient)
+
+@api_view(['POST'])
+def withdraw_funds(request):
+    serializer = WithdrawalSerializer(data=request.data, context={'request': request})
+    serializer.is_valid(raise_exception=True)
+    response = serializer.save()
+
+    return Response(response)
+
 
 @api_view(['POST'])
 def transfer_funds(request):
     serializer = TransferSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
-    serializer.save()
-    return Response({"status": True, "detail": "Transfer successful" })
+    response = serializer.save()
+    return Response(response)
 
-def home(request):
-    response = requests.get('https://api.paystack.co/transaction/initialize')
-    data = response.json()
 
-    return JsonResponse(data)
+
+
  

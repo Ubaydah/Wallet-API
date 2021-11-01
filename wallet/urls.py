@@ -12,5 +12,8 @@ urlpatterns = [
     path('deposit/', deposit_funds),
     path('transfer/', transfer_funds),
     path('deposit/verify/<str:reference>/', verify_deposit),
+    path('create_recipient/', create_transfer_recipient),
+    path('verify_account_number/', verify_account_number),
+    path('withdraw/', withdraw_funds)
 
 ]

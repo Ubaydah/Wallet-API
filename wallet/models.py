@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db.models.aggregates import Max
 from django.utils.translation import ugettext_lazy as _
 from .managers import CustomUserManager
 from django.conf import settings
@@ -27,6 +28,9 @@ class Wallet(models.Model):
         settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE)
     currency = models.CharField(max_length=50, default='NGN')
     created_at = models.DateTimeField(default=timezone.now, null=True)
+    account_number = models.CharField(max_length=100, default='', blank=True)
+    bank_code = models.CharField(max_length=100, default='', blank=True)
+    recipient_code = models.CharField(max_length=100, default='', blank=True)
 
     def __str__(self):
         return self.user.__str__()
@@ -37,6 +41,7 @@ class WalletTransaction(models.Model):
     TRANSACTION_TYPES = (
         ('deposit', 'deposit'),
         ('transfer', 'transfer'),
+        ('withdraw', 'withdraw'),
     )
     wallet = models.ForeignKey(Wallet, null=True, on_delete=models.CASCADE)
     transaction_type = models.CharField(
